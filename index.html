@@ -79,12 +79,52 @@
 
       <!-- Main Content -->
       <main class="main-content">
-        <!-- Bluetooth Controls -->
-        <div id="bluetoothControls" class="controls hidden">
+        <!-- Mode Toggle -->
+        <div id="modeToggle" class="mode-toggle hidden">
+          <div class="mode-buttons">
+            <button id="basicModeBtn" class="mode-btn active">
+              📱 Mode Basique
+            </button>
+            <button id="advancedModeBtn" class="mode-btn">
+              🔬 Mode Avancé
+            </button>
+          </div>
+          <p class="mode-description" id="modeDescription">
+            Mode basique : Ajoutez des appareils un par un
+          </p>
+        </div>
+
+        <!-- Bluetooth Controls (Mode Basique) -->
+        <div id="bluetoothControls" class="controls mode-section hidden">
           <button id="scanBtn" class="btn btn-primary">
             <span class="btn-icon">🔍</span>
             Ajouter un appareil Bluetooth
           </button>
+        </div>
+
+        <!-- Advanced Scan (Mode Avancé) -->
+        <div id="advancedScan" class="controls mode-section hidden">
+          <div class="scan-controls">
+            <button id="startScanBtn" class="btn btn-primary">
+              <span class="btn-icon">📡</span>
+              Démarrer le scan en temps réel
+            </button>
+            <button id="stopScanBtn" class="btn btn-danger hidden">
+              <span class="btn-icon">⏹️</span>
+              Arrêter le scan
+            </button>
+          </div>
+
+          <!-- Appareils détectés -->
+          <div id="detectedDevices" class="detected-devices hidden">
+            <h3 class="devices-title">
+              📡 Appareils détectés (<span id="detectedCount">0</span>)
+              <span class="scan-indicator">● Scan actif</span>
+            </h3>
+            <div id="detectedList" class="devices-container">
+              <!-- Les appareils détectés apparaîtront ici -->
+            </div>
+          </div>
         </div>
 
         <!-- Liste des appareils connectés -->
@@ -121,17 +161,21 @@
           <h3>📡 Comment utiliser BlueForce ?</h3>
           <ul class="info-list">
             <li>
-              <strong>Ajouter un appareil :</strong> Cliquez sur "Ajouter un
-              appareil Bluetooth" - une popup du navigateur s'ouvrira pour
-              sélectionner l'appareil (sécurité obligatoire)
+              <strong>Mode Basique :</strong> Ajoutez des appareils un par un
+              via la popup du navigateur (sécurité obligatoire)
+            </li>
+            <li>
+              <strong>Mode Avancé 🔬 :</strong> Scannez TOUS les appareils en
+              temps réel avec leur signal ! Cliquez ensuite sur "Connecter" (une
+              popup s'ouvrira quand même pour la sécurité)
             </li>
             <li>
               <strong>Connexions multiples :</strong> Vous pouvez connecter
               plusieurs appareils simultanément
             </li>
             <li>
-              <strong>Nom des appareils :</strong> Le vrai nom s'affiche après
-              connexion (pas juste l'adresse MAC)
+              <strong>Nom réel :</strong> Le vrai nom s'affiche après connexion
+              (pas juste l'adresse MAC)
             </li>
             <li>
               <strong>Historique :</strong> Vos appareils sont mémorisés pour un
@@ -142,6 +186,17 @@
               accéder au Bluetooth
             </li>
           </ul>
+          <p
+            style="
+              margin-top: 12px;
+              font-size: 0.85rem;
+              color: var(--accent-cyan);
+              text-align: center;
+            "
+          >
+            💡 Le mode avancé nécessite Chrome avec les fonctionnalités
+            expérimentales activées
+          </p>
         </div>
       </main>
 

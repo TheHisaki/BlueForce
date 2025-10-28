@@ -4,11 +4,23 @@ BlueForce est une application web progressive (PWA) moderne qui permet de gérer
 
 ## ✨ Fonctionnalités
 
+### Mode Basique 📱
+
 - 🔍 **Scan Bluetooth** via la popup native du navigateur (sécurité)
 - 🔗 **Connexions multiples** - connectez plusieurs appareils simultanément
 - 📱 **Noms réels** des appareils affichés (pas seulement l'adresse MAC)
 - 🕒 **Historique** des appareils avec sauvegarde locale
-- 📊 **Liste visuelle** de tous les appareils connectés
+
+### Mode Avancé 🔬 (Expérimental)
+
+- 📡 **Scan en temps réel** - Voyez TOUS les appareils Bluetooth à proximité
+- 📊 **Indicateur de signal** - Barres de signal et RSSI en dBm
+- 🔄 **Mise à jour automatique** - Liste des appareils actualisée en direct
+- 🎯 **Tri par signal** - Les appareils les plus proches en premier
+- ⚡ **Connexion rapide** - Cliquez directement sur un appareil détecté
+
+### Fonctionnalités communes
+
 - ❌ **Déconnexion individuelle** pour chaque appareil
 - 🌙 **Interface dark moderne** avec thème futuriste bleu/violet
 - 🔔 **Notifications toast** pour chaque action
@@ -82,14 +94,35 @@ Accédez ensuite à `https://localhost:8443` (acceptez l'avertissement de certif
 
 ## 📖 Guide d'utilisation
 
-### Sur Android / Chrome Desktop
+### Mode Basique 📱
 
 1. Ouvrez le site dans Chrome
-2. Cliquez sur **"Ajouter un appareil Bluetooth"**
-3. Dans la popup du navigateur, sélectionnez votre appareil BLE
-4. Une fois connecté, l'appareil apparaît dans la liste avec son vrai nom
-5. Vous pouvez connecter plusieurs appareils en même temps
-6. Cliquez sur **"❌ Déconnecter"** sur chaque appareil pour le déconnecter
+2. Restez sur le **Mode Basique** (par défaut)
+3. Cliquez sur **"Ajouter un appareil Bluetooth"**
+4. Dans la popup du navigateur, sélectionnez votre appareil BLE
+5. Une fois connecté, l'appareil apparaît dans la liste avec son vrai nom
+6. Vous pouvez connecter plusieurs appareils en même temps
+7. Cliquez sur **"❌ Déconnecter"** sur chaque appareil pour le déconnecter
+
+### Mode Avancé 🔬 (Recommandé)
+
+1. Cliquez sur **"🔬 Mode Avancé"** en haut
+2. Cliquez sur **"📡 Démarrer le scan en temps réel"**
+3. Acceptez la permission de scan Bluetooth
+4. **Tous les appareils apparaissent en temps réel** avec leur signal !
+5. Cliquez sur **"🔗 Connecter"** sur l'appareil souhaité
+6. Une popup s'ouvre (sécurité obligatoire) → sélectionnez l'appareil
+7. L'appareil est connecté et apparaît dans votre liste
+
+#### Activer le Mode Avancé sur Chrome
+
+Le mode avancé nécessite une fonctionnalité expérimentale de Chrome :
+
+1. Ouvrez Chrome et allez à : `chrome://flags`
+2. Recherchez : `experimental-web-platform-features`
+3. Activez cette option
+4. Redémarrez Chrome
+5. Le mode avancé fonctionnera parfaitement !
 
 ### Important : Limitation de l'API Web Bluetooth
 

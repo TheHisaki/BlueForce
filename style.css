@@ -370,9 +370,78 @@ body::before {
   transform: none !important;
 }
 
+/* Mode Toggle */
+.mode-toggle {
+  margin-bottom: 24px;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 2px solid rgba(76, 110, 245, 0.3);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: "Poppins", sans-serif;
+}
+
+.mode-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+  background: rgba(76, 110, 245, 0.1);
+}
+
+.mode-btn.active {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: transparent;
+  box-shadow: var(--shadow-md);
+}
+
+.mode-description {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  padding: 8px;
+  background: rgba(76, 110, 245, 0.05);
+  border-radius: 8px;
+}
+
 /* Controls */
 .controls {
   margin-bottom: 24px;
+}
+
+.mode-section {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scan-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 /* Loading Spinner */
@@ -400,6 +469,95 @@ body::before {
 .loading-spinner p {
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+/* Detected Devices (Mode Avancé) */
+.detected-devices {
+  margin-top: 16px;
+}
+
+.scan-indicator {
+  font-size: 0.85rem;
+  color: var(--success);
+  animation: pulse-fade 2s ease-in-out infinite;
+  font-weight: 500;
+}
+
+.detected-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(76, 110, 245, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: var(--transition);
+  position: relative;
+  cursor: pointer;
+}
+
+.detected-card:hover {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.detected-card.connecting {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.signal-indicator {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.signal-bars {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 24px;
+}
+
+.signal-bar {
+  width: 4px;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  opacity: 0.3;
+  transition: var(--transition);
+}
+
+.signal-bar.active {
+  opacity: 1;
+  background: var(--success);
+}
+
+.signal-bar:nth-child(1) {
+  height: 6px;
+}
+.signal-bar:nth-child(2) {
+  height: 12px;
+}
+.signal-bar:nth-child(3) {
+  height: 18px;
+}
+.signal-bar:nth-child(4) {
+  height: 24px;
+}
+
+.signal-value {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+.device-advertisement {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
 }
 
 /* Devices List */

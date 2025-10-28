@@ -8,12 +8,23 @@
 // ============================================
 let connectedDevices = new Map(); // Map pour stocker plusieurs appareils connectés
 let deviceHistory = []; // Historique des appareils
+let detectedDevices = new Map(); // Appareils détectés en mode avancé
+let isScanning = false; // État du scan
+let scanAbortController = null; // Contrôleur pour arrêter le scan
+let currentMode = "basic"; // Mode actuel (basic ou advanced)
 
 // Éléments DOM
 const iosWarning = document.getElementById("iosWarning");
 const notSupportedWarning = document.getElementById("notSupportedWarning");
+const modeToggle = document.getElementById("modeToggle");
+const basicModeBtn = document.getElementById("basicModeBtn");
+const advancedModeBtn = document.getElementById("advancedModeBtn");
+const modeDescription = document.getElementById("modeDescription");
 const bluetoothControls = document.getElementById("bluetoothControls");
+const advancedScan = document.getElementById("advancedScan");
 const scanBtn = document.getElementById("scanBtn");
+const startScanBtn = document.getElementById("startScanBtn");
+const stopScanBtn = document.getElementById("stopScanBtn");
 const deviceTypeSpan = document.getElementById("deviceType");
 const loadingSpinner = document.getElementById("loadingSpinner");
 const toastContainer = document.getElementById("toastContainer");
@@ -24,6 +35,9 @@ const deviceCount = document.getElementById("deviceCount");
 const deviceHistorySection = document.getElementById("deviceHistory");
 const historyList = document.getElementById("historyList");
 const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+const detectedDevicesSection = document.getElementById("detectedDevices");
+const detectedList = document.getElementById("detectedList");
+const detectedCount = document.getElementById("detectedCount");
 
 // ============================================
 // Détection du type d'appareil
@@ -66,6 +80,22 @@ function init() {
   // Ajouter les event listeners
   scanBtn.addEventListener("click", scanForDevices);
 
+  // Mode Toggle
+  if (basicModeBtn) {
+    basicModeBtn.addEventListener("click", () => switchMode("basic"));
+  }
+  if (advancedModeBtn) {
+    advancedModeBtn.addEventListener("click", () => switchMode("advanced"));
+  }
+
+  // Mode avancé
+  if (startScanBtn) {
+    startScanBtn.addEventListener("click", startAdvancedScan);
+  }
+  if (stopScanBtn) {
+    stopScanBtn.addEventListener("click", stopAdvancedScan);
+  }
+
   // Gérer le bouton Bluefy pour iOS
   if (bluefyBtn) {
     bluefyBtn.addEventListener("click", openInBluefy);
@@ -105,12 +135,286 @@ function checkBluetoothSupport() {
   }
 
   // Si tout est OK, afficher les contrôles
+  modeToggle.classList.remove("hidden");
   bluetoothControls.classList.remove("hidden");
   showToast("✅ Bluetooth disponible sur cet appareil", "success");
 }
 
 // ============================================
-// Scanner les appareils Bluetooth
+// Basculer entre les modes
+// ============================================
+function switchMode(mode) {
+  currentMode = mode;
+
+  // Mettre à jour les boutons
+  if (mode === "basic") {
+    basicModeBtn.classList.add("active");
+    advancedModeBtn.classList.remove("active");
+    bluetoothControls.classList.remove("hidden");
+    advancedScan.classList.add("hidden");
+    modeDescription.textContent =
+      "Mode basique : Ajoutez des appareils un par un";
+
+    // Arrêter le scan si actif
+    if (isScanning) {
+      stopAdvancedScan();
+    }
+  } else {
+    basicModeBtn.classList.remove("active");
+    advancedModeBtn.classList.add("active");
+    bluetoothControls.classList.add("hidden");
+    advancedScan.classList.remove("hidden");
+    modeDescription.textContent =
+      "Mode avancé : Scannez tous les appareils en temps réel";
+  }
+
+  showToast(
+    `🔄 Basculé en mode ${mode === "basic" ? "basique" : "avancé"}`,
+    "info"
+  );
+}
+
+// ============================================
+// Mode Avancé - Scan en temps réel
+// ============================================
+async function startAdvancedScan() {
+  // Vérifier si l'API de scan est disponible
+  if (!navigator.bluetooth || !navigator.bluetooth.requestLEScan) {
+    showToast(
+      "⚠️ Le scan Bluetooth avancé n'est pas supporté sur ce navigateur. Essayez Chrome avec le flag experimental-web-platform-features activé.",
+      "error"
+    );
+    return;
+  }
+
+  try {
+    startScanBtn.disabled = true;
+
+    // Créer un AbortController pour pouvoir arrêter le scan
+    scanAbortController = new AbortController();
+
+    showToast("📡 Démarrage du scan Bluetooth...", "info");
+
+    // Demander la permission de scanner
+    const scan = await navigator.bluetooth.requestLEScan({
+      acceptAllAdvertisements: true,
+    });
+
+    isScanning = true;
+    startScanBtn.classList.add("hidden");
+    stopScanBtn.classList.remove("hidden");
+    detectedDevicesSection.classList.remove("hidden");
+
+    // Écouter les advertisements
+    navigator.bluetooth.addEventListener(
+      "advertisementreceived",
+      handleAdvertisement,
+      { signal: scanAbortController.signal }
+    );
+
+    showToast(
+      "✅ Scan actif - Les appareils apparaissent en temps réel",
+      "success"
+    );
+
+    // Nettoyer les anciens appareils toutes les 10 secondes
+    const cleanupInterval = setInterval(() => {
+      if (!isScanning) {
+        clearInterval(cleanupInterval);
+        return;
+      }
+      cleanupOldDevices();
+    }, 10000);
+  } catch (error) {
+    handleBluetoothError(error);
+    startScanBtn.disabled = false;
+  }
+}
+
+function stopAdvancedScan() {
+  if (scanAbortController) {
+    scanAbortController.abort();
+    scanAbortController = null;
+  }
+
+  isScanning = false;
+  startScanBtn.classList.remove("hidden");
+  stopScanBtn.classList.add("hidden");
+  startScanBtn.disabled = false;
+
+  // Nettoyer la liste
+  detectedDevices.clear();
+  updateDetectedDevicesUI();
+
+  showToast("⏹️ Scan arrêté", "info");
+}
+
+function handleAdvertisement(event) {
+  const device = event.device;
+  const rssi = event.rssi;
+
+  // Mettre à jour ou ajouter l'appareil
+  detectedDevices.set(device.id, {
+    device: device,
+    name: device.name || "Appareil inconnu",
+    id: device.id,
+    rssi: rssi,
+    lastSeen: Date.now(),
+  });
+
+  updateDetectedDevicesUI();
+}
+
+function cleanupOldDevices() {
+  const now = Date.now();
+  const timeout = 15000; // 15 secondes
+
+  detectedDevices.forEach((deviceData, deviceId) => {
+    if (now - deviceData.lastSeen > timeout) {
+      detectedDevices.delete(deviceId);
+    }
+  });
+
+  updateDetectedDevicesUI();
+}
+
+function updateDetectedDevicesUI() {
+  detectedCount.textContent = detectedDevices.size;
+  detectedList.innerHTML = "";
+
+  if (detectedDevices.size === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `
+      <div class="empty-state-icon">📡</div>
+      <div class="empty-state-text">Aucun appareil détecté pour le moment...</div>
+    `;
+    detectedList.appendChild(empty);
+    return;
+  }
+
+  // Trier par signal (RSSI)
+  const sortedDevices = Array.from(detectedDevices.values()).sort(
+    (a, b) => b.rssi - a.rssi
+  );
+
+  sortedDevices.forEach((deviceData) => {
+    const card = createDetectedDeviceCard(deviceData);
+    detectedList.appendChild(card);
+  });
+}
+
+function createDetectedDeviceCard(deviceData) {
+  const card = document.createElement("div");
+  card.className = "detected-card";
+
+  // Indicateur de signal
+  const signalIndicator = document.createElement("div");
+  signalIndicator.className = "signal-indicator";
+
+  const signalBars = document.createElement("div");
+  signalBars.className = "signal-bars";
+
+  // Calculer le nombre de barres actives (RSSI: -100 à -30 dBm)
+  const signalStrength = Math.max(
+    0,
+    Math.min(4, Math.floor((deviceData.rssi + 100) / 17.5))
+  );
+
+  for (let i = 0; i < 4; i++) {
+    const bar = document.createElement("div");
+    bar.className = `signal-bar ${i < signalStrength ? "active" : ""}`;
+    signalBars.appendChild(bar);
+  }
+
+  const signalValue = document.createElement("div");
+  signalValue.className = "signal-value";
+  signalValue.textContent = `${deviceData.rssi} dBm`;
+
+  signalIndicator.appendChild(signalBars);
+  signalIndicator.appendChild(signalValue);
+
+  // Icône
+  const icon = document.createElement("div");
+  icon.className = "device-icon";
+  icon.textContent = "📱";
+
+  // Détails
+  const details = document.createElement("div");
+  details.className = "device-details";
+
+  const name = document.createElement("div");
+  name.className = "device-name";
+  name.textContent = deviceData.name;
+
+  const id = document.createElement("div");
+  id.className = "device-id";
+  id.textContent = deviceData.id;
+
+  details.appendChild(name);
+  details.appendChild(id);
+
+  // Bouton de connexion
+  const actions = document.createElement("div");
+  actions.className = "device-actions";
+
+  const connectBtn = document.createElement("button");
+  connectBtn.className = "btn-small btn-reconnect";
+  connectBtn.textContent = "🔗 Connecter";
+  connectBtn.onclick = () => connectToDetectedDevice(deviceData);
+
+  actions.appendChild(connectBtn);
+
+  card.appendChild(signalIndicator);
+  card.appendChild(icon);
+  card.appendChild(details);
+  card.appendChild(actions);
+
+  return card;
+}
+
+async function connectToDetectedDevice(deviceData) {
+  try {
+    // Vérifier si déjà connecté
+    if (connectedDevices.has(deviceData.id)) {
+      showToast(`⚠️ ${deviceData.name} est déjà connecté`, "info");
+      return;
+    }
+
+    showToast("🔗 Connexion en cours...", "info");
+
+    // Utiliser l'API standard pour se connecter (la popup s'ouvrira quand même)
+    const options = {
+      filters: [{ name: deviceData.name }],
+      optionalServices: [
+        "battery_service",
+        "device_information",
+        "generic_access",
+        "0000180a-0000-1000-8000-00805f9b34fb",
+        "00001800-0000-1000-8000-00805f9b34fb",
+      ],
+    };
+
+    // Si le nom est "Appareil inconnu", on utilise acceptAllDevices
+    if (deviceData.name === "Appareil inconnu") {
+      delete options.filters;
+      options.acceptAllDevices = true;
+    }
+
+    const device = await navigator.bluetooth.requestDevice(options);
+
+    device.addEventListener("gattserverdisconnected", () =>
+      onDisconnected(device.id)
+    );
+
+    await connectToDevice(device);
+  } catch (error) {
+    handleBluetoothError(error);
+  }
+}
+
+// ============================================
+// Scanner les appareils Bluetooth (Mode Basique)
 // ============================================
 async function scanForDevices() {
   try {
