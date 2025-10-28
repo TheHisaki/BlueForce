@@ -6,24 +6,24 @@
 // ============================================
 // Variables globales
 // ============================================
-let bluetoothDevice = null;
-let deviceConnected = false;
+let connectedDevices = new Map(); // Map pour stocker plusieurs appareils connectés
+let deviceHistory = []; // Historique des appareils
 
 // Éléments DOM
 const iosWarning = document.getElementById("iosWarning");
 const notSupportedWarning = document.getElementById("notSupportedWarning");
 const bluetoothControls = document.getElementById("bluetoothControls");
 const scanBtn = document.getElementById("scanBtn");
-const disconnectBtn = document.getElementById("disconnectBtn");
-const statusIndicator = document.getElementById("statusIndicator");
-const statusText = document.getElementById("statusText");
-const deviceInfo = document.getElementById("deviceInfo");
-const deviceName = document.getElementById("deviceName");
-const deviceId = document.getElementById("deviceId");
 const deviceTypeSpan = document.getElementById("deviceType");
 const loadingSpinner = document.getElementById("loadingSpinner");
 const toastContainer = document.getElementById("toastContainer");
 const bluefyBtn = document.getElementById("bluefyBtn");
+const connectedDevicesSection = document.getElementById("connectedDevices");
+const devicesList = document.getElementById("devicesList");
+const deviceCount = document.getElementById("deviceCount");
+const deviceHistorySection = document.getElementById("deviceHistory");
+const historyList = document.getElementById("historyList");
+const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
 // ============================================
 // Détection du type d'appareil
@@ -65,12 +65,20 @@ function init() {
 
   // Ajouter les event listeners
   scanBtn.addEventListener("click", scanForDevices);
-  disconnectBtn.addEventListener("click", disconnectDevice);
 
   // Gérer le bouton Bluefy pour iOS
   if (bluefyBtn) {
     bluefyBtn.addEventListener("click", openInBluefy);
   }
+
+  // Gérer l'historique
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener("click", clearHistory);
+  }
+
+  // Charger l'historique depuis le localStorage
+  loadHistoryFromStorage();
+  updateUI();
 }
 
 // ============================================
@@ -110,32 +118,39 @@ async function scanForDevices() {
     scanBtn.disabled = true;
     loadingSpinner.classList.remove("hidden");
 
-    showToast("🔍 Recherche d'appareils Bluetooth...", "info");
+    showToast("🔍 Sélectionnez un appareil Bluetooth...", "info");
 
     // Options de scan (accepter tous les appareils BLE)
     const options = {
-      // acceptAllDevices: true permet de voir tous les appareils
       acceptAllDevices: true,
-      optionalServices: ["battery_service", "device_information"],
+      optionalServices: [
+        "battery_service",
+        "device_information",
+        "generic_access",
+        "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
+        "00001800-0000-1000-8000-00805f9b34fb", // Generic Access
+      ],
     };
 
-    // Alternative : filtrer par nom ou service
-    // const options = {
-    //     filters: [
-    //         { name: 'Mon Appareil' },
-    //         { services: ['battery_service'] },
-    //         { namePrefix: 'BLE' }
-    //     ]
-    // };
-
     // Demander à l'utilisateur de sélectionner un appareil
-    bluetoothDevice = await navigator.bluetooth.requestDevice(options);
+    const device = await navigator.bluetooth.requestDevice(options);
+
+    // Vérifier si l'appareil est déjà connecté
+    if (connectedDevices.has(device.id)) {
+      showToast(
+        `⚠️ ${device.name || "Cet appareil"} est déjà connecté`,
+        "info"
+      );
+      return;
+    }
 
     // Écouter la déconnexion
-    bluetoothDevice.addEventListener("gattserverdisconnected", onDisconnected);
+    device.addEventListener("gattserverdisconnected", () =>
+      onDisconnected(device.id)
+    );
 
     // Se connecter au serveur GATT
-    await connectToDevice(bluetoothDevice);
+    await connectToDevice(device);
   } catch (error) {
     handleBluetoothError(error);
   } finally {
@@ -155,14 +170,35 @@ async function connectToDevice(device) {
     // Connexion au serveur GATT
     const server = await device.gatt.connect();
 
-    // Succès !
-    deviceConnected = true;
-    updateUIConnected(device);
+    // Essayer de récupérer le nom réel de l'appareil
+    let realName = device.name || "Appareil inconnu";
+    try {
+      const service = await server.getPrimaryService("generic_access");
+      const characteristic = await service.getCharacteristic("gap.device_name");
+      const value = await characteristic.readValue();
+      const decoder = new TextDecoder("utf-8");
+      const name = decoder.decode(value);
+      if (name) realName = name;
+    } catch (e) {
+      // Nom générique non disponible, on garde le nom BLE
+    }
 
-    showToast(`✅ Connecté à ${device.name || "Appareil inconnu"}`, "success");
+    // Stocker l'appareil connecté
+    connectedDevices.set(device.id, {
+      device: device,
+      server: server,
+      name: realName,
+      id: device.id,
+      connectedAt: new Date(),
+    });
 
-    // Optionnel : lire des services/caractéristiques
-    // await readDeviceServices(server);
+    // Ajouter à l'historique
+    addToHistory(device.id, realName);
+
+    // Mettre à jour l'interface
+    updateUI();
+
+    showToast(`✅ Connecté à ${realName}`, "success");
   } catch (error) {
     showToast("❌ Erreur lors de la connexion", "error");
     console.error("Erreur de connexion:", error);
@@ -170,81 +206,208 @@ async function connectToDevice(device) {
 }
 
 // ============================================
-// Lecture des services (optionnel)
+// Déconnexion d'un appareil
 // ============================================
-async function readDeviceServices(server) {
-  try {
-    // Exemple : lire le niveau de batterie si disponible
-    const batteryService = await server.getPrimaryService("battery_service");
-    const batteryLevel = await batteryService.getCharacteristic(
-      "battery_level"
-    );
-    const value = await batteryLevel.readValue();
-    const battery = value.getUint8(0);
+function disconnectDevice(deviceId) {
+  const deviceData = connectedDevices.get(deviceId);
 
-    showToast(`🔋 Batterie: ${battery}%`, "info");
-  } catch (error) {
-    // Service non disponible, ce n'est pas grave
-    console.log("Service batterie non disponible");
-  }
-}
-
-// ============================================
-// Déconnexion
-// ============================================
-function disconnectDevice() {
-  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice.gatt.disconnect();
-    showToast("🔴 Déconnexion en cours...", "info");
+  if (deviceData && deviceData.device.gatt.connected) {
+    deviceData.device.gatt.disconnect();
+    showToast(`🔴 Déconnexion de ${deviceData.name}...`, "info");
   } else {
-    showToast("⚠️ Aucun appareil connecté", "error");
+    connectedDevices.delete(deviceId);
+    updateUI();
   }
 }
 
 // ============================================
 // Événement de déconnexion
 // ============================================
-function onDisconnected(event) {
-  deviceConnected = false;
-  updateUIDisconnected();
-  showToast("🔴 Appareil déconnecté", "info");
+function onDisconnected(deviceId) {
+  const deviceData = connectedDevices.get(deviceId);
 
-  // Réinitialiser la variable
-  bluetoothDevice = null;
+  if (deviceData) {
+    showToast(`🔴 ${deviceData.name} déconnecté`, "info");
+    connectedDevices.delete(deviceId);
+    updateUI();
+  }
 }
 
 // ============================================
-// Mise à jour de l'interface (connecté)
+// Mise à jour de l'interface
 // ============================================
-function updateUIConnected(device) {
-  // Mettre à jour le statut
-  statusText.textContent = `Connecté à ${device.name || "Appareil inconnu"}`;
-  statusIndicator.querySelector(".pulse").classList.add("connected");
+function updateUI() {
+  // Mettre à jour le compteur
+  deviceCount.textContent = connectedDevices.size;
 
-  // Afficher les infos de l'appareil
-  deviceName.textContent = device.name || "Appareil inconnu";
-  deviceId.textContent = device.id || "N/A";
-  deviceInfo.classList.remove("hidden");
+  // Afficher/masquer la section des appareils connectés
+  if (connectedDevices.size > 0) {
+    connectedDevicesSection.classList.remove("hidden");
+    renderConnectedDevices();
+  } else {
+    connectedDevicesSection.classList.add("hidden");
+  }
 
-  // Afficher le bouton de déconnexion
-  disconnectBtn.classList.remove("hidden");
-  scanBtn.textContent = "🔄 Scanner un autre appareil";
+  // Afficher/masquer l'historique
+  if (deviceHistory.length > 0) {
+    deviceHistorySection.classList.remove("hidden");
+    renderHistory();
+  } else {
+    deviceHistorySection.classList.add("hidden");
+  }
 }
 
 // ============================================
-// Mise à jour de l'interface (déconnecté)
+// Afficher les appareils connectés
 // ============================================
-function updateUIDisconnected() {
-  // Mettre à jour le statut
-  statusText.textContent = "Aucun appareil connecté";
-  statusIndicator.querySelector(".pulse").classList.remove("connected");
+function renderConnectedDevices() {
+  devicesList.innerHTML = "";
 
-  // Masquer les infos de l'appareil
-  deviceInfo.classList.add("hidden");
+  connectedDevices.forEach((deviceData, deviceId) => {
+    const card = createDeviceCard(deviceData, true);
+    devicesList.appendChild(card);
+  });
+}
 
-  // Masquer le bouton de déconnexion
-  disconnectBtn.classList.add("hidden");
-  scanBtn.textContent = "🔍 Scanner les appareils Bluetooth";
+// ============================================
+// Créer une carte d'appareil
+// ============================================
+function createDeviceCard(deviceData, isConnected = false) {
+  const card = document.createElement("div");
+  card.className = `device-card ${isConnected ? "connected" : ""}`;
+
+  const icon = document.createElement("div");
+  icon.className = "device-icon";
+  icon.textContent = "📱";
+
+  const details = document.createElement("div");
+  details.className = "device-details";
+
+  const name = document.createElement("div");
+  name.className = "device-name";
+  name.textContent = deviceData.name;
+
+  const id = document.createElement("div");
+  id.className = "device-id";
+  id.textContent = deviceData.id;
+
+  details.appendChild(name);
+  details.appendChild(id);
+
+  if (isConnected) {
+    const status = document.createElement("div");
+    status.className = "device-status";
+    status.textContent = "Connecté";
+    details.appendChild(status);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "device-actions";
+
+  if (isConnected) {
+    const disconnectBtn = document.createElement("button");
+    disconnectBtn.className = "btn-small btn-disconnect";
+    disconnectBtn.textContent = "❌ Déconnecter";
+    disconnectBtn.onclick = () => disconnectDevice(deviceData.id);
+    actions.appendChild(disconnectBtn);
+  } else {
+    const reconnectBtn = document.createElement("button");
+    reconnectBtn.className = "btn-small btn-reconnect";
+    reconnectBtn.textContent = "🔄 Reconnecter";
+    reconnectBtn.onclick = () => {
+      showToast(
+        "ℹ️ Utilisez le bouton 'Ajouter un appareil' pour reconnecter",
+        "info"
+      );
+    };
+    actions.appendChild(reconnectBtn);
+  }
+
+  card.appendChild(icon);
+  card.appendChild(details);
+  card.appendChild(actions);
+
+  return card;
+}
+
+// ============================================
+// Gestion de l'historique
+// ============================================
+function addToHistory(deviceId, deviceName) {
+  // Éviter les doublons
+  const existing = deviceHistory.findIndex((d) => d.id === deviceId);
+  if (existing !== -1) {
+    deviceHistory.splice(existing, 1);
+  }
+
+  // Ajouter en début de liste
+  deviceHistory.unshift({
+    id: deviceId,
+    name: deviceName,
+    lastConnected: new Date().toISOString(),
+  });
+
+  // Limiter à 10 appareils
+  if (deviceHistory.length > 10) {
+    deviceHistory = deviceHistory.slice(0, 10);
+  }
+
+  // Sauvegarder dans le localStorage
+  saveHistoryToStorage();
+}
+
+function renderHistory() {
+  historyList.innerHTML = "";
+
+  // Filtrer l'historique pour ne pas afficher les appareils déjà connectés
+  const filteredHistory = deviceHistory.filter(
+    (h) => !connectedDevices.has(h.id)
+  );
+
+  if (filteredHistory.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `
+      <div class="empty-state-icon">📝</div>
+      <div class="empty-state-text">Tous les appareils de l'historique sont déjà connectés</div>
+    `;
+    historyList.appendChild(empty);
+    return;
+  }
+
+  filteredHistory.forEach((historyItem) => {
+    const card = createDeviceCard(historyItem, false);
+    historyList.appendChild(card);
+  });
+}
+
+function saveHistoryToStorage() {
+  try {
+    localStorage.setItem("blueforce_history", JSON.stringify(deviceHistory));
+  } catch (e) {
+    console.error("Erreur lors de la sauvegarde de l'historique:", e);
+  }
+}
+
+function loadHistoryFromStorage() {
+  try {
+    const stored = localStorage.getItem("blueforce_history");
+    if (stored) {
+      deviceHistory = JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error("Erreur lors du chargement de l'historique:", e);
+    deviceHistory = [];
+  }
+}
+
+function clearHistory() {
+  if (confirm("Voulez-vous vraiment effacer tout l'historique ?")) {
+    deviceHistory = [];
+    saveHistoryToStorage();
+    updateUI();
+    showToast("🗑️ Historique effacé", "success");
+  }
 }
 
 // ============================================
@@ -390,22 +553,3 @@ function showInstallPrompt() {
 // Démarrage de l'application
 // ============================================
 document.addEventListener("DOMContentLoaded", init);
-
-// ============================================
-// Gestion de la reconnexion automatique (optionnel)
-// ============================================
-async function reconnectToDevice() {
-  if (bluetoothDevice) {
-    try {
-      showToast("🔄 Tentative de reconnexion...", "info");
-      await bluetoothDevice.gatt.connect();
-      updateUIConnected(bluetoothDevice);
-      showToast("✅ Reconnecté avec succès", "success");
-    } catch (error) {
-      showToast("❌ Échec de la reconnexion", "error");
-    }
-  }
-}
-
-// Optionnel : bouton de reconnexion
-// disconnectBtn.addEventListener('dblclick', reconnectToDevice);

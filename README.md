@@ -4,11 +4,13 @@ BlueForce est une application web progressive (PWA) moderne qui permet de gérer
 
 ## ✨ Fonctionnalités
 
-- 🔍 **Scan automatique** des appareils Bluetooth à proximité
-- 🔗 **Connexion/Déconnexion** facile aux périphériques BLE
-- 📱 **Détection automatique** du type d'appareil (iOS, Android, Desktop)
+- 🔍 **Scan Bluetooth** via la popup native du navigateur (sécurité)
+- 🔗 **Connexions multiples** - connectez plusieurs appareils simultanément
+- 📱 **Noms réels** des appareils affichés (pas seulement l'adresse MAC)
+- 🕒 **Historique** des appareils avec sauvegarde locale
+- 📊 **Liste visuelle** de tous les appareils connectés
+- ❌ **Déconnexion individuelle** pour chaque appareil
 - 🌙 **Interface dark moderne** avec thème futuriste bleu/violet
-- 📊 **Indicateur de statut** en temps réel
 - 🔔 **Notifications toast** pour chaque action
 - 💾 **PWA complète** - installable sur l'écran d'accueil
 - 🎨 **Design responsive** optimisé pour mobile et desktop
@@ -83,10 +85,26 @@ Accédez ensuite à `https://localhost:8443` (acceptez l'avertissement de certif
 ### Sur Android / Chrome Desktop
 
 1. Ouvrez le site dans Chrome
-2. Cliquez sur **"Scanner les appareils Bluetooth"**
-3. Sélectionnez votre appareil BLE dans la liste
-4. Une fois connecté, vous verrez les infos de l'appareil
-5. Utilisez **"Déconnecter l'appareil"** pour terminer la connexion
+2. Cliquez sur **"Ajouter un appareil Bluetooth"**
+3. Dans la popup du navigateur, sélectionnez votre appareil BLE
+4. Une fois connecté, l'appareil apparaît dans la liste avec son vrai nom
+5. Vous pouvez connecter plusieurs appareils en même temps
+6. Cliquez sur **"❌ Déconnecter"** sur chaque appareil pour le déconnecter
+
+### Important : Limitation de l'API Web Bluetooth
+
+⚠️ **Le navigateur impose une popup de sélection pour des raisons de sécurité et de vie privée.**
+
+- Vous **ne pouvez pas** scanner et afficher tous les appareils directement sur le site
+- Vous **devez** sélectionner l'appareil dans la popup native du navigateur
+- Cette limitation est **normale** et protège votre vie privée
+
+**MAIS** BlueForce offre :
+
+- ✅ Affichage du **nom réel** après connexion (pas juste l'adresse MAC)
+- ✅ **Liste visuelle** de tous vos appareils connectés
+- ✅ **Historique** pour retrouver vos appareils facilement
+- ✅ **Connexions multiples** pour gérer plusieurs appareils
 
 ### Sur iPhone / iPad
 
