@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1a0f2e" />
+    <meta
+      name="description"
+      content="BlueForce - Gestion de connexions Bluetooth BLE"
+    />
+    <title>BlueForce - Bluetooth Manager</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔵</text></svg>"
+    />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <h1 class="logo">
+          <span class="logo-icon">🔵</span>
+          BlueForce
+        </h1>
+        <p class="subtitle">Gestionnaire de connexions Bluetooth</p>
+      </header>
+
+      <!-- iOS Warning (hidden by default) -->
+      <div id="iosWarning" class="alert alert-warning hidden">
+        <div class="alert-icon">🚫</div>
+        <div class="alert-content">
+          <h3>Bluetooth non supporté sur Safari iOS</h3>
+          <p>
+            Pour utiliser les fonctions Bluetooth, ouvre ce site dans l'app
+            <strong>Bluefy</strong>.
+          </p>
+          <a
+            href="https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055"
+            class="btn btn-bluefy"
+            target="_blank"
+          >
+            📱 Ouvrir dans Bluefy
+          </a>
+        </div>
+      </div>
+
+      <!-- Browser Not Supported Warning -->
+      <div id="notSupportedWarning" class="alert alert-error hidden">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <h3>Navigateur incompatible</h3>
+          <p>Votre navigateur ne supporte pas encore le Bluetooth Web API.</p>
+          <p class="small-text">
+            Essayez Chrome sur Android ou utilisez Bluefy sur iOS.
+          </p>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Device Status -->
+        <div class="status-card">
+          <div class="status-indicator" id="statusIndicator">
+            <div class="pulse"></div>
+            <span id="statusText">Aucun appareil connecté</span>
+          </div>
+          <div id="deviceInfo" class="device-info hidden">
+            <p><strong>Appareil :</strong> <span id="deviceName">-</span></p>
+            <p><strong>ID :</strong> <span id="deviceId">-</span></p>
+          </div>
+        </div>
+
+        <!-- Bluetooth Controls -->
+        <div id="bluetoothControls" class="controls hidden">
+          <button id="scanBtn" class="btn btn-primary">
+            <span class="btn-icon">🔍</span>
+            Scanner les appareils Bluetooth
+          </button>
+
+          <button id="disconnectBtn" class="btn btn-danger hidden">
+            <span class="btn-icon">❌</span>
+            Déconnecter l'appareil
+          </button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner hidden">
+          <div class="spinner"></div>
+          <p>Recherche d'appareils...</p>
+        </div>
+
+        <!-- Info Section -->
+        <div class="info-section">
+          <h3>📡 Comment utiliser BlueForce ?</h3>
+          <ul class="info-list">
+            <li>
+              <strong>Android / Chrome Desktop :</strong> Cliquez sur "Scanner"
+              pour détecter les appareils BLE à proximité
+            </li>
+            <li>
+              <strong>iPhone / iPad :</strong> Téléchargez l'app Bluefy depuis
+              l'App Store
+            </li>
+            <li>
+              <strong>Connexion :</strong> Sélectionnez un appareil dans la
+              liste pour vous connecter
+            </li>
+            <li>
+              <strong>Déconnexion :</strong> Utilisez le bouton "Déconnecter"
+              pour terminer la connexion
+            </li>
+          </ul>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>BlueForce © 2025 | Bluetooth Web API</p>
+        <p class="device-type">
+          Appareil détecté : <span id="deviceType">Chargement...</span>
+        </p>
+      </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+  </body>
+</html>
