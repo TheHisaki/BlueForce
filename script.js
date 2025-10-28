@@ -23,6 +23,7 @@ const deviceId = document.getElementById("deviceId");
 const deviceTypeSpan = document.getElementById("deviceType");
 const loadingSpinner = document.getElementById("loadingSpinner");
 const toastContainer = document.getElementById("toastContainer");
+const bluefyBtn = document.getElementById("bluefyBtn");
 
 // ============================================
 // Détection du type d'appareil
@@ -65,6 +66,11 @@ function init() {
   // Ajouter les event listeners
   scanBtn.addEventListener("click", scanForDevices);
   disconnectBtn.addEventListener("click", disconnectDevice);
+
+  // Gérer le bouton Bluefy pour iOS
+  if (bluefyBtn) {
+    bluefyBtn.addEventListener("click", openInBluefy);
+  }
 }
 
 // ============================================
@@ -242,10 +248,43 @@ function updateUIDisconnected() {
 }
 
 // ============================================
+// Ouvrir dans Bluefy (iOS)
+// ============================================
+function openInBluefy() {
+  // Récupérer l'URL actuelle
+  const currentUrl = window.location.href;
+
+  // Encoder l'URL pour Bluefy
+  const bluefyUrl = `bluefy://openurl?url=${encodeURIComponent(currentUrl)}`;
+
+  // Essayer d'ouvrir Bluefy
+  window.location.href = bluefyUrl;
+
+  // Si Bluefy n'est pas installé, afficher le bouton App Store après un délai
+  setTimeout(() => {
+    // Vérifier si on est toujours sur la page (Bluefy ne s'est pas ouvert)
+    const appStoreBtn = document.querySelector(".btn-app-store");
+    if (appStoreBtn) {
+      bluefyBtn.style.display = "none";
+      appStoreBtn.style.display = "inline-flex";
+      showToast(
+        "📲 Bluefy n'est pas installé. Téléchargez-le depuis l'App Store.",
+        "info"
+      );
+    }
+  }, 2000);
+}
+
+// ============================================
 // Gestion des erreurs Bluetooth
 // ============================================
 function handleBluetoothError(error) {
   console.error("Erreur Bluetooth:", error);
+
+  if (!error) {
+    showToast("❌ Une erreur inconnue s'est produite", "error");
+    return;
+  }
 
   if (error.name === "NotFoundError") {
     showToast("ℹ️ Aucun appareil sélectionné", "info");
@@ -255,8 +294,13 @@ function handleBluetoothError(error) {
     showToast("⚠️ Fonction non supportée par cet appareil", "error");
   } else if (error.name === "NetworkError") {
     showToast("📡 Erreur de connexion réseau Bluetooth", "error");
+  } else if (error.name === "InvalidStateError") {
+    showToast("⚠️ Le Bluetooth n'est pas disponible ou activé", "error");
+  } else if (error.name === "NotAllowedError") {
+    showToast("🚫 Permission Bluetooth refusée", "error");
   } else {
-    showToast(`❌ Erreur: ${error.message}`, "error");
+    const errorMsg = error.message || error.toString() || "Erreur inconnue";
+    showToast(`❌ Erreur: ${errorMsg}`, "error");
   }
 }
 

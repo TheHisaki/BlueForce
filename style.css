@@ -340,7 +340,8 @@ body::before {
   box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
 }
 
-.btn-bluefy {
+.btn-bluefy,
+.btn-app-store {
   background: linear-gradient(135deg, #22b8cf 0%, #15aabf 100%);
   color: white;
   width: auto;
@@ -349,9 +350,18 @@ body::before {
   margin-top: 12px;
 }
 
-.btn-bluefy:hover {
+.btn-bluefy:hover,
+.btn-app-store:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(34, 184, 207, 0.4);
+}
+
+.btn-app-store {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+}
+
+.btn-app-store:hover {
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
 }
 
 .btn:disabled {
